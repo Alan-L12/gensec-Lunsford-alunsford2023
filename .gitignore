@@ -50,3 +50,9 @@ dist/
 *.egg
 pip-wheel-metadata/
 share/python-wheels/
+env
+.venv
+.chromadb
+__pycache__
+*.pyc
+.env
