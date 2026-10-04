@@ -10,6 +10,7 @@ Only use this application with prompts and code you trust.
 
 from dotenv import load_dotenv
 from langchain.agents import create_agent
+from langchain.tools import tool
 from langchain_experimental.tools import PythonREPLTool
 from langchain_openai import ChatOpenAI
 
@@ -18,12 +19,43 @@ load_dotenv()
 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
 python_repl = PythonREPLTool()
-tools = [python_repl]
+
+
+@tool
+def calculate_text_metrics(text: str) -> dict[str, int | float]:
+	"""Calculate basic text statistics for the provided string.
+
+	Character count includes all characters, including whitespace. Word count
+	uses whitespace to separate words, and average word length is the number
+	of non-whitespace word characters divided by the word count. Empty or
+	whitespace-only input has an average word length of 0.0.
+
+	Args:
+		text: The string to analyze.
+
+	Returns:
+		A mapping containing ``character_count``, ``word_count``, and
+		``average_word_length``.
+	"""
+	words = text.split()
+	word_count = len(words)
+	average_word_length = (
+		sum(len(word) for word in words) / word_count if word_count else 0.0
+	)
+	return {
+		"character_count": len(text),
+		"word_count": word_count,
+		"average_word_length": average_word_length,
+	}
+
+
+tools = [python_repl, calculate_text_metrics]
 
 SYSTEM_PROMPT = (
-	"You are a helpful assistant with access to a Python REPL tool. "
-	"Use the tool when calculation or executable Python is needed, and "
-	"explain the result clearly."
+	"You are a helpful assistant with access to a Python REPL tool and a text "
+	"statistics tool. Use the text statistics tool for character counts, word "
+	"counts, and average word length. Use the Python REPL when other calculation "
+	"or executable Python is needed, and explain the result clearly."
 )
 
 
@@ -46,8 +78,9 @@ def main():
 	printed. Enter a blank line or send EOF to exit the session.
 	"""
 	agent = build_agent()
-	print("Python tool-calling agent ready. Enter a prompt, or a blank line to exit.")
-	print(f"Tool: {python_repl.name} - {python_repl.description}")
+	print("Tool-calling agent ready. Enter a prompt, or a blank line to exit.")
+	for agent_tool in tools:
+		print(f"Tool: {agent_tool.name} - {agent_tool.description}")
 
 	while True:
 		try:
