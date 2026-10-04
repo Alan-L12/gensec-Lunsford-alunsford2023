@@ -1,16 +1,21 @@
-"""Homework 3: a basic LangChain agent with an interactive Python REPL tool.
+"""Homework 3: a basic LangChain agent with Python and text-metrics tools.
 
 Environment variables are loaded from a local ``.env`` file when present.
 OpenAI credentials must be provided through the environment, for example via
 ``OPENAI_API_KEY``; this module does not contain API keys.
 
+Author FAU ID: alunsford2023.
+
 Security note: ``PythonREPLTool`` executes Python code in the current process.
 Only use this application with prompts and code you trust.
 """
 
+from typing import Any
+
 from dotenv import load_dotenv
 from langchain.agents import create_agent
 from langchain.tools import tool
+from langchain_core.tools import ToolException
 from langchain_experimental.tools import PythonREPLTool
 from langchain_openai import ChatOpenAI
 
@@ -59,28 +64,35 @@ SYSTEM_PROMPT = (
 )
 
 
-def build_agent():
+def build_agent() -> Any:
 	"""Create and return the tool-calling agent for this application.
 
 	The agent uses the configured OpenAI chat model, the Python REPL tool,
 	and a system prompt that guides when and how the tool should be used.
 
 	Returns:
-		A LangChain agent graph ready to receive messages via ``invoke``.
+		Any: A LangChain agent graph ready to receive messages via ``invoke``.
 	"""
 	return create_agent(model=llm, tools=tools, system_prompt=SYSTEM_PROMPT)
 
 
-def main():
+def main() -> None:
 	"""Run an interactive command-line session with the tool-calling agent.
 
 	Each non-empty input is sent to the agent and its final response is
 	printed. Enter a blank line or send EOF to exit the session.
+
+	Returns:
+		None.
 	"""
 	agent = build_agent()
-	print("Tool-calling agent ready. Enter a prompt, or a blank line to exit.")
-	for agent_tool in tools:
-		print(f"Tool: {agent_tool.name} - {agent_tool.description}")
+	print("=" * 64)
+	print("FAU LANGCHAIN TOOL-CALLING ASSIGNMENT | alunsford2023")
+	print("=" * 64)
+	print("Loaded tools:")
+	for configured_tool in tools:
+		print(f"  - {configured_tool.name}: {configured_tool.description}")
+	print("Enter a prompt, or a blank line to exit.\n")
 
 	while True:
 		try:
@@ -96,13 +108,24 @@ def main():
 			result = agent.invoke(
 				{"messages": [{"role": "user", "content": prompt}]}
 			)
-			print(result["messages"][-1].content)
+			tool_failures = [
+				message
+				for message in result.get("messages", [])
+				if getattr(message, "type", None) == "tool"
+				and getattr(message, "status", None) == "error"
+			]
+			for failure in tool_failures:
+				print(
+					f"Tool execution failed ({failure.name}): {failure.content}"
+				)
+			final_message = result.get("messages", [])[-1]
+			if not tool_failures or getattr(final_message, "type", None) != "tool":
+				print(final_message.content)
+		except ToolException as error:
+			print(f"Tool execution failed: {error}")
 		except Exception as error:
-			print(f"Agent error: {error}")
+			print(f"Agent request failed ({type(error).__name__}): {error}")
 
 
 if __name__ == "__main__":
 	main()
-
-
-#alunsford2023
