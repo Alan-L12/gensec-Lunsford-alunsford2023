@@ -8,20 +8,34 @@ MCP server (mcp-server-fetch) to solve multi-step tasks and evaluate adversarial
 import asyncio
 import os
 import sys
+import warnings
 from pathlib import Path
 from dotenv import load_dotenv
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
 
-load_dotenv()
+warnings.filterwarnings("ignore")
+load_dotenv(override=True)
 
 
 def get_llm():
     """
     Initialize the chat model using environment variables (never hardcoded API keys).
     """
-    from langchain_openai import ChatOpenAI
-    return ChatOpenAI(model="gpt-4o-mini", temperature=0, request_timeout=20)
+    gkey = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+    if gkey:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        return ChatGoogleGenerativeAI(
+            model="gemini-2.0-flash",
+            google_api_key=gkey,
+            vertexai=False,
+            temperature=0,
+        )
+    if os.getenv("OPENAI_API_KEY"):
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(model="gpt-4o-mini", temperature=0, request_timeout=20)
+    from langchain_ollama import ChatOllama
+    return ChatOllama(model=os.getenv("OLLAMA_MODEL", "llama3.2"), temperature=0)
 
 
 async def run_agent_queries():
