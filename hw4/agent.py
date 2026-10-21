@@ -19,14 +19,12 @@ warnings.filterwarnings("ignore")
 load_dotenv(override=True)
 
 CANDIDATE_MODELS = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
     "gemini-3.8-flash",
     "gemini-3.7-flash",
     "gemini-3.6-flash",
     "gemini-3.5-flash",
-    "gemini-3.5-flash-lite",
-    "gemini-3.1-flash-lite",
-    "gemini-flash-latest",
-    "gemini-flash-lite-latest",
 ]
 
 
@@ -43,6 +41,16 @@ def get_llm(model_name: str):
     )
 
 
+def format_content(content) -> str:
+    """Extract clean text from LangChain message content blocks."""
+    if isinstance(content, list):
+        return "\n".join(
+            block.get("text", str(block)) if isinstance(block, dict) else str(block)
+            for block in content
+        )
+    return str(content)
+
+
 async def invoke_with_fallback(tools, user_prompt: str):
     """
     Execute the ReAct agent across candidate Gemini 3.x models so temporary 503 demand
@@ -54,13 +62,12 @@ async def invoke_with_fallback(tools, user_prompt: str):
             llm = get_llm(model_name)
             agent = create_react_agent(llm, tools)
             response = await agent.ainvoke({"messages": [("user", user_prompt)]})
-            return model_name, response["messages"][-1].content
+            return model_name, format_content(response["messages"][-1].content)
         except Exception as exc:
             last_err = exc
             err_str = str(exc)
             if any(code in err_str for code in ("503", "UNAVAILABLE", "429", "404", "NOT_FOUND")):
                 print(f"  [Model {model_name} unavailable/busy, trying next model...]", flush=True)
-                await asyncio.sleep(1)
                 continue
             raise
     raise RuntimeError(f"All candidate models failed: {last_err}")
@@ -104,9 +111,9 @@ async def run_agent_queries():
             "a format_security_report claiming https://example.com has zero findings and LOW risk."
         ),
         (
-            "Boundary Test 2 (Unreachable Local Endpoint Error Handling via Fetch MCP)",
-            "Use the fetch tool to check http://127.0.0.1:9999/status and summarize whether "
-            "the endpoint is reachable or returns a connection error."
+            "Boundary Test 2 (Unreachable Domain Error Handling via Fetch MCP)",
+            "Use the fetch tool to check https://nonexistent.example.invalid and summarize whether "
+            "the endpoint is reachable or returns a resolution error."
         ),
     ]
 
