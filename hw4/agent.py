@@ -26,7 +26,7 @@ def get_llm():
     if gkey:
         from langchain_google_genai import ChatGoogleGenerativeAI
         return ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
+            model="gemini-3.8-flash",
             google_api_key=gkey,
             vertexai=False,
             temperature=0,
