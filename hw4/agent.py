@@ -19,11 +19,14 @@ warnings.filterwarnings("ignore")
 load_dotenv(override=True)
 
 CANDIDATE_MODELS = [
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
-    "gemini-3.5-flash",
-    "gemini-3.6-flash",
+    "gemini-3.8-flash",
     "gemini-3.7-flash",
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
 ]
 
 
@@ -42,8 +45,8 @@ def get_llm(model_name: str):
 
 async def invoke_with_fallback(tools, user_prompt: str):
     """
-    Execute the ReAct agent across candidate Gemini models so temporary 503 demand
-    spikes automatically roll over to an available model.
+    Execute the ReAct agent across candidate Gemini 3.x models so temporary 503 demand
+    spikes or 404 deprecations automatically roll over to an available model.
     """
     last_err = None
     for model_name in CANDIDATE_MODELS:
@@ -54,11 +57,13 @@ async def invoke_with_fallback(tools, user_prompt: str):
             return model_name, response["messages"][-1].content
         except Exception as exc:
             last_err = exc
-            if "503" in str(exc) or "UNAVAILABLE" in str(exc) or "429" in str(exc):
-                print(f"  [Model {model_name} busy, switching to fallback...]", flush=True)
+            err_str = str(exc)
+            if any(code in err_str for code in ("503", "UNAVAILABLE", "429", "404", "NOT_FOUND")):
+                print(f"  [Model {model_name} unavailable/busy, trying next model...]", flush=True)
+                await asyncio.sleep(1)
                 continue
             raise
-    raise RuntimeError(f"All candidate models busy: {last_err}")
+    raise RuntimeError(f"All candidate models failed: {last_err}")
 
 
 async def run_agent_queries():
