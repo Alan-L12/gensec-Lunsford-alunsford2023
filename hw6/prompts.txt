@@ -1,0 +1,13 @@
+﻿Prompt 1 (Core Application - Author: alunsford2023):
+Write a complete Python 3 command-line application in hw6/app.py (author FAU ID: alunsford2023) using only the Python standard library that re-implements core functionality from nmap and wfuzz. Include two subcommands via argparse:
+1. 'scan': performs a concurrent TCP port scan and service banner grab on a target host and comma-separated port list using socket and concurrent.futures.
+2. 'fuzz': performs HTTP path fuzzing against a target URL containing the token FUZZ using a list of payloads or a wordlist file, reporting HTTP status codes, response sizes, and latency.
+Do not include any AI-generated boilerplate comments or inline commentary; include only a brief module header with FAU ID alunsford2023 and minimal function docstrings.
+
+Prompt 2 (Security Hardening Against Adversarial Input - Author: alunsford2023):
+Harden hw6/app.py against adversarial and malformed inputs (author FAU ID: alunsford2023):
+1. Enforce a strict regex allowlist on hostnames and IPv4 addresses to block shell metacharacters, command injection payloads, and malformed targets.
+2. Validate all port numbers (1-65535), cap maximum ports per scan to 64, and enforce strict socket/HTTP timeouts (1.5s) and thread limits (max 10 workers) to prevent resource exhaustion and DoS.
+3. Restrict URLs in 'fuzz' strictly to http:// or https:// schemes (blocking file://, ftp://, and javascript:// SSRF vectors) and sanitize payload tokens to strip control characters and CRLF header injection sequences.
+4. Restrict any '--wordlist' file path to the current working directory using os.path.realpath, rejecting path traversal sequences ('..'), symlinks, and files larger than 64 KB.
+5. Add a '--demo-security' flag that runs a self-contained test suite demonstrating both valid execution and the rejection of adversarial inputs (command injection, CRLF injection, SSRF scheme abuse, and path traversal). Keep the code free of AI commentary.
